@@ -10,15 +10,19 @@ public class UIManager : MonoBehaviour
 
     [Inject] private INetworkManager _networkManager;
     [Inject] private GameEventBus _eventBus;
+    [Inject] private DeckBuilderManager _deckBuilderManager;
 
     private void Awake()
     {
         _waitingForOpponentPanel.SetActive(false);
+        _quickMatchButton.interactable = false;
+        _playerVsBotButton.interactable = false;
     }
 
     private void OnEnable()
     {
         _quickMatchButton.onClick.AddListener(OnQuickMatchClicked);
+        _deckBuilderManager.OnSelectionChanged += OnDeckSelectionChanged;
         _eventBus.SubscribeTo<MatchSearchStarted>(OnMatchSearchStarted);
         _eventBus.SubscribeTo<MatchFound>(OnMatchFound);
         _eventBus.SubscribeTo<MatchFailed>(OnMatchFailed);
@@ -27,9 +31,17 @@ public class UIManager : MonoBehaviour
     private void OnDisable()
     {
         _quickMatchButton.onClick.RemoveListener(OnQuickMatchClicked);
+        _deckBuilderManager.OnSelectionChanged -= OnDeckSelectionChanged;
         _eventBus.UnsubscribeFrom<MatchSearchStarted>(OnMatchSearchStarted);
         _eventBus.UnsubscribeFrom<MatchFound>(OnMatchFound);
         _eventBus.UnsubscribeFrom<MatchFailed>(OnMatchFailed);
+    }
+
+    private void OnDeckSelectionChanged()
+    {
+        bool deckFull = _deckBuilderManager.IsDeckFull;
+        _quickMatchButton.interactable = deckFull;
+        _playerVsBotButton.interactable = deckFull;
     }
 
     private void OnQuickMatchClicked()
