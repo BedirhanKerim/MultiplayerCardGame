@@ -15,20 +15,46 @@ public class InputRaycaster : MonoBehaviour
     private CardUnit _draggedCard;
     private int _prevSortingOrder;
     private float _dragY;
+    private bool _locked;
 
     private void OnEnable()
     {
         _eventBus.SubscribeTo<GameStateChanged>(OnGameStateChanged);
+        _eventBus.SubscribeTo<LocalPlayerConfirmed>(OnLocalPlayerConfirmed);
+        _eventBus.SubscribeTo<TurnStarted>(OnTurnStarted);
     }
 
     private void OnDisable()
     {
         _eventBus.UnsubscribeFrom<GameStateChanged>(OnGameStateChanged);
+        _eventBus.UnsubscribeFrom<LocalPlayerConfirmed>(OnLocalPlayerConfirmed);
+        _eventBus.UnsubscribeFrom<TurnStarted>(OnTurnStarted);
     }
 
     private void OnGameStateChanged(ref GameStateChanged e)
     {
         _currentState = e.State;
+    }
+
+    private void OnLocalPlayerConfirmed(ref LocalPlayerConfirmed _)
+    {
+        _locked = true;
+        ForceDropDraggedCard();
+    }
+
+    private void ForceDropDraggedCard()
+    {
+        if (_draggedCard != null)
+        {
+            _draggedCard.Canvas.sortingOrder = _prevSortingOrder;
+            _draggedCard.OnDrop();
+            _draggedCard = null;
+        }
+    }
+
+    private void OnTurnStarted(ref TurnStarted _)
+    {
+        _locked = false;
     }
 
     private void Update()
@@ -55,6 +81,7 @@ public class InputRaycaster : MonoBehaviour
 
     private void HandleDragDrop()
     {
+        if (_locked) return;
         if (Input.GetMouseButtonDown(0))
         {
             var ray = _camera.ScreenPointToRay(Input.mousePosition);

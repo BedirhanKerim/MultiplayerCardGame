@@ -9,6 +9,7 @@ public class GameLifetimeScope : LifetimeScope
     [SerializeField] private DeckBuilderManager _deckBuilderManager;
     [SerializeField] private GameplayManager _gameplayManager;
     [SerializeField] private InputRaycaster _inputRaycaster;
+    [SerializeField] private NetworkTurnSystem _networkTurnSystem;
     [SerializeField] private TurnConfigSO _turnConfig;
     protected override void Configure(IContainerBuilder builder)
     {
@@ -19,6 +20,7 @@ public class GameLifetimeScope : LifetimeScope
         builder.Register<HandLayoutManager>(Lifetime.Singleton);
         builder.RegisterComponent(_gameplayManager);
         builder.RegisterComponent(_inputRaycaster);
+        builder.RegisterComponent(_networkTurnSystem);
         builder.Register<BotOpponent>(Lifetime.Singleton).As<IOpponent>();
         builder.RegisterInstance(_turnConfig);
     }

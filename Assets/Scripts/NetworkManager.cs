@@ -6,20 +6,15 @@ using Fusion.Sockets;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VContainer;
-using VContainer.Unity;
 
 public class NetworkManager : MonoBehaviour, INetworkManager, INetworkRunnerCallbacks
 {
     [SerializeField] private NetworkRunner _runnerPrefab;
-    [SerializeField] private NetworkTurnSystem _turnSystemPrefab;
 
     [Inject] private GameEventBus _eventBus;
-    [Inject] private IObjectResolver _container;
-    [Inject] private TurnConfigSO _turnConfig;
-    [Inject] private GameplayManager _gameplayManager;
+    [Inject] private NetworkTurnSystem _turnSystem;
 
     private NetworkRunner _runner;
-    private NetworkTurnSystem _turnSystem;
 
     public async void StartQuickMatch()
     {
@@ -70,18 +65,8 @@ public class NetworkManager : MonoBehaviour, INetworkManager, INetworkRunnerCall
             _eventBus.Raise(new GameStateChanged { State = GameState.Gameplay });
 
             if (runner.IsServer)
-                SpawnTurnSystem();
+                _turnSystem.StartGame();
         }
-    }
-
-    private void SpawnTurnSystem()
-    {
-        var obj = _runner.Spawn(_turnSystemPrefab);
-        _turnSystem = obj;
-        _container.InjectGameObject(obj.gameObject);
-        _turnSystem.InjectConfig(_turnConfig);
-        _gameplayManager.SetTurnSystem(_turnSystem);
-        _turnSystem.StartGame();
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
@@ -98,6 +83,7 @@ public class NetworkManager : MonoBehaviour, INetworkManager, INetworkRunnerCall
 
     // Unused callbacks
     public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
+
     public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
     public void OnInput(NetworkRunner runner, NetworkInput input) { }
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }

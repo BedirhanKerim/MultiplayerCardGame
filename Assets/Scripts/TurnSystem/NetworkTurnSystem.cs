@@ -10,6 +10,7 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
     [Inject] private GameEventBus _eventBus;
     [Inject] private DeckBuilderManager _deckBuilderManager;
     [Inject] private GameplayManager _gameplayManager;
+    [Inject] private TurnConfigSO _config;
 
     [Networked] private int _currentTurn { get; set; }
     [Networked] private TurnPhase _phase { get; set; }
@@ -21,50 +22,34 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
     [Networked] private NetworkBool _player1Confirmed { get; set; }
     [Networked] private NetworkBool _player2Confirmed { get; set; }
 
-    private TurnConfigSO _config;
-    private ChangeDetector _changeDetector;
-    private PlayerRef _player1;
-    private PlayerRef _player2;
+    [Networked] private PlayerRef _player1 { get; set; }
+    [Networked] private PlayerRef _player2 { get; set; }
 
-    // ITurnSystem — local oyuncu perspektifinden
+    private ChangeDetector _changeDetector;
+
     public int CurrentTurn => _currentTurn;
     public int MaxTurns => _config != null ? _config.MaxTurns : 6;
     public int PlayerHp => IsPlayer1() ? _player1Hp : _player2Hp;
     public int OpponentHp => IsPlayer1() ? _player2Hp : _player1Hp;
     public bool IsPlayerTurn => _phase == TurnPhase.Playing;
 
-    public void InjectConfig(TurnConfigSO config)
-    {
-        _config = config;
-    }
-
     public override void Spawned()
     {
         _changeDetector = GetChangeDetector(ChangeDetector.Source.SnapshotTo, false);
-
-        var players = Runner.ActivePlayers.ToArray();
-        if (players.Length >= 2)
-        {
-            _player1 = players[0];
-            _player2 = players[1];
-        }
-
-        // Client tarafında da inject ve GameplayManager'a set
-        if (_gameplayManager != null)
-            _gameplayManager.SetTurnSystem(this);
-
-        if (Object.HasStateAuthority)
-        {
-            _player1Hp = _config.StartingHp;
-            _player2Hp = _config.StartingHp;
-            _currentTurn = 0;
-            _phase = TurnPhase.WaitingForPlayers;
-        }
+        _gameplayManager.SetTurnSystem(this);
     }
 
     public void StartGame()
     {
         if (!Object.HasStateAuthority) return;
+
+        var players = Runner.ActivePlayers.ToArray();
+        _player1 = players[0];
+        _player2 = players[1];
+
+        _player1Hp = _config.StartingHp;
+        _player2Hp = _config.StartingHp;
+        _currentTurn = 0;
         StartNextTurn();
     }
 
@@ -79,21 +64,23 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
         _phase = TurnPhase.Playing;
     }
 
-    // Oyuncu kartı masaya koydu
+    public bool IsLocalConfirmed => IsPlayer1() ? (bool)_player1Confirmed : (bool)_player2Confirmed;
+
     public void PlaceCard(CardInstance card)
     {
+        if (IsLocalConfirmed) return;
         RPC_PlaceCard(card.Data.CardId);
     }
 
-    // Oyuncu kartı geri çekti
     public void RemoveCard()
     {
+        if (IsLocalConfirmed) return;
         RPC_RemoveCard();
     }
 
-    // Oyuncu turu onayladı
     public void ConfirmTurn()
     {
+        if (IsLocalConfirmed) return;
         RPC_ConfirmTurn();
     }
 
@@ -102,58 +89,87 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
         // Timer FixedUpdateNetwork'te yönetiliyor
     }
 
+    private PlayerRef GetSource(RpcInfo info)
+    {
+        return info.Source == PlayerRef.None ? Runner.LocalPlayer : info.Source;
+    }
+
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_PlaceCard(int cardId, RpcInfo info = default)
     {
+        var source = GetSource(info);
+        Debug.Log($"[NTS] RPC_PlaceCard cardId={cardId} source={source} phase={_phase}");
         if (_phase != TurnPhase.Playing) return;
 
-        if (info.Source == _player1)
+        if (source == _player1)
             _player1CardId = cardId;
-        else if (info.Source == _player2)
+        else if (source == _player2)
             _player2CardId = cardId;
+        Debug.Log($"[NTS] After PlaceCard: P1Card={_player1CardId}, P2Card={_player2CardId}");
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_RemoveCard(RpcInfo info = default)
     {
         if (_phase != TurnPhase.Playing) return;
+        var source = GetSource(info);
 
-        if (info.Source == _player1)
+        if (source == _player1)
             _player1CardId = -1;
-        else if (info.Source == _player2)
+        else if (source == _player2)
             _player2CardId = -1;
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_ConfirmTurn(RpcInfo info = default)
     {
+        var source = GetSource(info);
+        Debug.Log($"[NTS] RPC_ConfirmTurn source={source} phase={_phase}");
         if (_phase != TurnPhase.Playing) return;
 
-        if (info.Source == _player1)
+        if (source == _player1)
             _player1Confirmed = true;
-        else if (info.Source == _player2)
+        else if (source == _player2)
             _player2Confirmed = true;
 
+        Debug.Log($"[NTS] P1Confirmed={_player1Confirmed}, P2Confirmed={_player2Confirmed}");
+
         if (_player1Confirmed && _player2Confirmed)
+        {
+            Debug.Log("[NTS] Both confirmed, resolving turn...");
             ResolveTurn();
+        }
     }
 
     public override void FixedUpdateNetwork()
     {
         if (!Object.HasStateAuthority) return;
-        if (_phase != TurnPhase.Playing) return;
 
-        _turnTimer -= Runner.DeltaTime;
-
-        if (_turnTimer <= 0f)
+        if (_phase == TurnPhase.Playing)
         {
-            _turnTimer = 0f;
-            ResolveTurn();
+            _turnTimer -= Runner.DeltaTime;
+            if (_turnTimer <= 0f)
+            {
+                _turnTimer = 0f;
+                ResolveTurn();
+            }
+        }
+        else if (_phase == TurnPhase.Resolving)
+        {
+            _turnTimer -= Runner.DeltaTime;
+            if (_turnTimer <= 0f)
+            {
+                if (_player1Hp <= 0 || _player2Hp <= 0 || _currentTurn >= _config.MaxTurns)
+                    _phase = TurnPhase.GameOver;
+                else
+                    StartNextTurn();
+            }
         }
     }
 
     private void ResolveTurn()
     {
+        Debug.Log($"[NTS] ResolveTurn! P1Card={_player1CardId}, P2Card={_player2CardId}, P1Hp={_player1Hp}, P2Hp={_player2Hp}");
         _phase = TurnPhase.Resolving;
 
         var db = _deckBuilderManager.CardDatabase;
@@ -182,15 +198,7 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
 
         _player1Hp = Mathf.Max(0, _player1Hp - p1Damage);
         _player2Hp = Mathf.Max(0, _player2Hp - p2Damage);
-
-        if (_player1Hp <= 0 || _player2Hp <= 0 || _currentTurn >= _config.MaxTurns)
-        {
-            _phase = TurnPhase.GameOver;
-        }
-        else
-        {
-            StartNextTurn();
-        }
+        _turnTimer = _config.ResolveDuration;
     }
 
     private CardInstance FindCard(CardDatabaseSO db, int cardId)
@@ -204,10 +212,9 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
         return null;
     }
 
-    // Her iki client'ta çalışır — state değişikliklerini event'e çevirir
     public override void Render()
     {
-        if (_changeDetector == null) return;
+        if (_changeDetector == null || _eventBus == null) return;
 
         foreach (var change in _changeDetector.DetectChanges(this))
         {
@@ -222,18 +229,29 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
                 case nameof(_phase):
                     OnPhaseChanged();
                     break;
+                case nameof(_player1CardId):
+                case nameof(_player2CardId):
+                    OnOpponentCardIdChanged();
+                    break;
+                case nameof(_player1Confirmed):
+                case nameof(_player2Confirmed):
+                    if (IsLocalConfirmed)
+                        _eventBus.Raise(new LocalPlayerConfirmed());
+                    break;
             }
         }
     }
 
     private void OnPhaseChanged()
     {
+        Debug.Log($"[NTS] OnPhaseChanged: {_phase}");
         if (_phase == TurnPhase.Resolving)
         {
             var db = _deckBuilderManager.CardDatabase;
             bool isP1 = IsPlayer1();
             var myCard = FindCard(db, isP1 ? _player1CardId : _player2CardId);
             var oppCard = FindCard(db, isP1 ? _player2CardId : _player1CardId);
+            Debug.Log($"[NTS] SimResult: isP1={isP1}, myCard={myCard?.Data.CardId}, oppCard={oppCard?.Data.CardId}, P1Hp={_player1Hp}, P2Hp={_player2Hp}");
 
             _eventBus.Raise(new TurnEnded { TurnNumber = _currentTurn });
             _eventBus.Raise(new SimulationResult
@@ -251,6 +269,22 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
             bool isDraw = _player1Hp == _player2Hp;
             bool playerWon = IsPlayer1() ? _player1Hp > _player2Hp : _player2Hp > _player1Hp;
             _eventBus.Raise(new GameOver { PlayerWon = playerWon, IsDraw = isDraw });
+        }
+    }
+
+    private void OnOpponentCardIdChanged()
+    {
+        bool isP1 = IsPlayer1();
+        int oppCardId = isP1 ? _player2CardId : _player1CardId;
+
+        if (oppCardId >= 0)
+        {
+            var card = FindCard(_deckBuilderManager.CardDatabase, oppCardId);
+            _eventBus.Raise(new OpponentCardChanged { Card = card });
+        }
+        else
+        {
+            _eventBus.Raise(new OpponentCardChanged { Card = null });
         }
     }
 

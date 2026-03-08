@@ -33,6 +33,8 @@ public class GameplayManager : MonoBehaviour
         _eventBus.SubscribeTo<TurnEnded>(OnTurnEnded);
         _eventBus.SubscribeTo<SimulationResult>(OnSimulationResult);
         _eventBus.SubscribeTo<TurnConfirmRequested>(OnTurnConfirmRequested);
+        _eventBus.SubscribeTo<OpponentCardChanged>(OnOpponentCardChanged);
+        _eventBus.SubscribeTo<TurnTimerUpdated>(OnTurnTimerUpdated);
     }
 
     private void OnDisable()
@@ -42,6 +44,8 @@ public class GameplayManager : MonoBehaviour
         _eventBus.UnsubscribeFrom<TurnEnded>(OnTurnEnded);
         _eventBus.UnsubscribeFrom<SimulationResult>(OnSimulationResult);
         _eventBus.UnsubscribeFrom<TurnConfirmRequested>(OnTurnConfirmRequested);
+        _eventBus.UnsubscribeFrom<OpponentCardChanged>(OnOpponentCardChanged);
+        _eventBus.UnsubscribeFrom<TurnTimerUpdated>(OnTurnTimerUpdated);
         UnsubscribeFromCards();
     }
 
@@ -69,7 +73,11 @@ public class GameplayManager : MonoBehaviour
     private void OnTurnStarted(ref TurnStarted e)
     {
         HideOpponentCard();
-        _playedCard = null;
+        if (_playedCard != null)
+        {
+            _playedCard.gameObject.SetActive(false);
+            _playedCard = null;
+        }
     }
 
     private void OnTurnEnded(ref TurnEnded e)
@@ -78,8 +86,15 @@ public class GameplayManager : MonoBehaviour
 
     private void OnSimulationResult(ref SimulationResult e)
     {
-        if (e.OpponentCard != null)
-            ShowOpponentCard(e.OpponentCard);
+        Debug.Log($"[GM] OnSimulationResult: OppCard={e.OpponentCard?.Data.CardId}, PlayerHp={e.PlayerHp}, OppHp={e.OpponentHp}");
+    }
+
+    private void OnOpponentCardChanged(ref OpponentCardChanged e)
+    {
+        if (e.Card != null)
+            ShowOpponentCard(e.Card);
+        else
+            HideOpponentCard();
     }
 
     private void SpawnOpponentCard()
@@ -104,6 +119,20 @@ public class GameplayManager : MonoBehaviour
     {
         if (_opponentCardUnit != null)
             _opponentCardUnit.gameObject.SetActive(false);
+    }
+
+    private void OnTurnTimerUpdated(ref TurnTimerUpdated e)
+    {
+        if (e.RemainingTime <= 1f && !_turnSystem.IsLocalConfirmed)
+        {
+            if (_playedCard == null && _handLayout.HandCards.Count > 0)
+            {
+                var cards = _handLayout.HandCards;
+                var randomCard = cards[Random.Range(0, cards.Count)];
+                PlayCard(randomCard);
+            }
+            _turnSystem.ConfirmTurn();
+        }
     }
 
     private void OnTurnConfirmRequested(ref TurnConfirmRequested _)

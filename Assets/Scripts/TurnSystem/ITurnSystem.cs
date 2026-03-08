@@ -5,6 +5,7 @@ public interface ITurnSystem
     int PlayerHp { get; }
     int OpponentHp { get; }
     bool IsPlayerTurn { get; }
+    bool IsLocalConfirmed { get; }
     void StartGame();
     void PlaceCard(CardInstance card);
     void RemoveCard();
