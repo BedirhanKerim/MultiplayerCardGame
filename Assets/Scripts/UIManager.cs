@@ -8,6 +8,8 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Button _playerVsBotButton;
     [SerializeField] private GameObject _waitingForOpponentPanel;
     [SerializeField] private GameObject _deckBuilderPanel;
+    [SerializeField] private GameObject _gameplayPanel;
+    [SerializeField] private Button _confirmTurnButton;
 
     [Inject] private INetworkManager _networkManager;
     [Inject] private GameEventBus _eventBus;
@@ -15,7 +17,9 @@ public class UIManager : MonoBehaviour
 
     private void Awake()
     {
+        _deckBuilderPanel.SetActive(true);
         _waitingForOpponentPanel.SetActive(false);
+        _gameplayPanel.SetActive(false);
         _quickMatchButton.interactable = false;
         _playerVsBotButton.interactable = false;
     }
@@ -24,6 +28,7 @@ public class UIManager : MonoBehaviour
     {
         _quickMatchButton.onClick.AddListener(OnQuickMatchClicked);
         _playerVsBotButton.onClick.AddListener(OnPlayerVsBotClicked);
+        _confirmTurnButton.onClick.AddListener(OnConfirmTurnClicked);
         _deckBuilderManager.OnSelectionChanged += OnDeckSelectionChanged;
         _eventBus.SubscribeTo<MatchSearchStarted>(OnMatchSearchStarted);
         _eventBus.SubscribeTo<MatchFound>(OnMatchFound);
@@ -34,6 +39,7 @@ public class UIManager : MonoBehaviour
     {
         _quickMatchButton.onClick.RemoveListener(OnQuickMatchClicked);
         _playerVsBotButton.onClick.RemoveListener(OnPlayerVsBotClicked);
+        _confirmTurnButton.onClick.RemoveListener(OnConfirmTurnClicked);
         _deckBuilderManager.OnSelectionChanged -= OnDeckSelectionChanged;
         _eventBus.UnsubscribeFrom<MatchSearchStarted>(OnMatchSearchStarted);
         _eventBus.UnsubscribeFrom<MatchFound>(OnMatchFound);
@@ -50,7 +56,7 @@ public class UIManager : MonoBehaviour
     private void OnQuickMatchClicked()
     {
         _networkManager.StartQuickMatch();
-        HideDeckBuilderPanel();
+        ShowGameplayPanel();
     }
 
     private void OnPlayerVsBotClicked()
@@ -58,12 +64,18 @@ public class UIManager : MonoBehaviour
         _eventBus.Raise(new BotMatchStarted());
         _eventBus.Raise(new GameStateChanged { State = GameState.Gameplay });
         SetButtonsInteractable(false);
-        HideDeckBuilderPanel();
+        ShowGameplayPanel();
     }
 
-    private void HideDeckBuilderPanel()
+    private void OnConfirmTurnClicked()
+    {
+        _eventBus.Raise(new TurnConfirmRequested());
+    }
+
+    private void ShowGameplayPanel()
     {
         _deckBuilderPanel.SetActive(false);
+        _gameplayPanel.SetActive(true);
     }
 
     private void OnMatchSearchStarted(ref MatchSearchStarted _)

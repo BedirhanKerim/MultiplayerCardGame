@@ -6,14 +6,20 @@ using Fusion.Sockets;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VContainer;
+using VContainer.Unity;
 
 public class NetworkManager : MonoBehaviour, INetworkManager, INetworkRunnerCallbacks
 {
     [SerializeField] private NetworkRunner _runnerPrefab;
+    [SerializeField] private NetworkTurnSystem _turnSystemPrefab;
 
     [Inject] private GameEventBus _eventBus;
+    [Inject] private IObjectResolver _container;
+    [Inject] private TurnConfigSO _turnConfig;
+    [Inject] private GameplayManager _gameplayManager;
 
     private NetworkRunner _runner;
+    private NetworkTurnSystem _turnSystem;
 
     public async void StartQuickMatch()
     {
@@ -61,8 +67,21 @@ public class NetworkManager : MonoBehaviour, INetworkManager, INetworkRunnerCall
         if (runner.ActivePlayers.Count() >= 2)
         {
             _eventBus.Raise(new MatchFound());
-            Debug.Log("All players connected, starting game!");
+            _eventBus.Raise(new GameStateChanged { State = GameState.Gameplay });
+
+            if (runner.IsServer)
+                SpawnTurnSystem();
         }
+    }
+
+    private void SpawnTurnSystem()
+    {
+        var obj = _runner.Spawn(_turnSystemPrefab);
+        _turnSystem = obj;
+        _container.InjectGameObject(obj.gameObject);
+        _turnSystem.InjectConfig(_turnConfig);
+        _gameplayManager.SetTurnSystem(_turnSystem);
+        _turnSystem.StartGame();
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)

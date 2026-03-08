@@ -10,7 +10,11 @@ public class DeckBuilderManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private GameObject _deckBuilderRoot;
     [SerializeField] private CardUnit _cardPrefab;
+
+    public CardUnit CardPrefab => _cardPrefab;
     [SerializeField] private CardDatabaseSO _cardDatabase;
+
+    public CardDatabaseSO CardDatabase => _cardDatabase;
 
     [Header("Slots")]
     [SerializeField] private Transform[] _inventorySlots;
