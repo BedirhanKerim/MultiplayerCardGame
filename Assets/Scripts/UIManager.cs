@@ -7,6 +7,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Button _quickMatchButton;
     [SerializeField] private Button _playerVsBotButton;
     [SerializeField] private GameObject _waitingForOpponentPanel;
+    [SerializeField] private GameObject _deckBuilderPanel;
 
     [Inject] private INetworkManager _networkManager;
     [Inject] private GameEventBus _eventBus;
@@ -22,6 +23,7 @@ public class UIManager : MonoBehaviour
     private void OnEnable()
     {
         _quickMatchButton.onClick.AddListener(OnQuickMatchClicked);
+        _playerVsBotButton.onClick.AddListener(OnPlayerVsBotClicked);
         _deckBuilderManager.OnSelectionChanged += OnDeckSelectionChanged;
         _eventBus.SubscribeTo<MatchSearchStarted>(OnMatchSearchStarted);
         _eventBus.SubscribeTo<MatchFound>(OnMatchFound);
@@ -31,6 +33,7 @@ public class UIManager : MonoBehaviour
     private void OnDisable()
     {
         _quickMatchButton.onClick.RemoveListener(OnQuickMatchClicked);
+        _playerVsBotButton.onClick.RemoveListener(OnPlayerVsBotClicked);
         _deckBuilderManager.OnSelectionChanged -= OnDeckSelectionChanged;
         _eventBus.UnsubscribeFrom<MatchSearchStarted>(OnMatchSearchStarted);
         _eventBus.UnsubscribeFrom<MatchFound>(OnMatchFound);
@@ -47,6 +50,20 @@ public class UIManager : MonoBehaviour
     private void OnQuickMatchClicked()
     {
         _networkManager.StartQuickMatch();
+        HideDeckBuilderPanel();
+    }
+
+    private void OnPlayerVsBotClicked()
+    {
+        _eventBus.Raise(new BotMatchStarted());
+        _eventBus.Raise(new GameStateChanged { State = GameState.Gameplay });
+        SetButtonsInteractable(false);
+        HideDeckBuilderPanel();
+    }
+
+    private void HideDeckBuilderPanel()
+    {
+        _deckBuilderPanel.SetActive(false);
     }
 
     private void OnMatchSearchStarted(ref MatchSearchStarted _)
@@ -58,6 +75,7 @@ public class UIManager : MonoBehaviour
     private void OnMatchFound(ref MatchFound _)
     {
         _waitingForOpponentPanel.SetActive(false);
+        _eventBus.Raise(new GameStateChanged { State = GameState.Gameplay });
     }
 
     private void OnMatchFailed(ref MatchFailed _)

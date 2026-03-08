@@ -699,7 +699,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 1, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8553075769770376736}
@@ -733,6 +733,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 63e3551c72c3a1d4ea88d6959a97f29e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _canvas: {fileID: 7364713105287574809}
 --- !u!65 &1319710810661662085
 BoxCollider:
   m_ObjectHideFlags: 0

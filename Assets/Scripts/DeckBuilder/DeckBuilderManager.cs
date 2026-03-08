@@ -27,27 +27,45 @@ public class DeckBuilderManager : MonoBehaviour
     public bool IsDeckFull => _selectedCards.Count == MaxDeckSize;
     public event Action OnSelectionChanged;
 
-    public void Show() => _deckBuilderRoot.SetActive(true);
-    public void Hide() => _deckBuilderRoot.SetActive(false);
+    public void Show()
+    {
+        _deckBuilderRoot.SetActive(true);
+        foreach (var card in _spawnedCards)
+            card.gameObject.SetActive(true);
+    }
+
+    public void Hide()
+    {
+        _deckBuilderRoot.SetActive(false);
+        foreach (var card in _spawnedCards)
+        {
+            if (!_selectedCards.Contains(card))
+                card.gameObject.SetActive(false);
+        }
+    }
 
     private void OnEnable()
     {
         _eventBus.SubscribeTo<MatchSearchStarted>(OnMatchSearchStarted);
+        _eventBus.SubscribeTo<BotMatchStarted>(OnBotMatchStarted);
         _eventBus.SubscribeTo<MatchFailed>(OnMatchFailed);
     }
 
     private void OnDisable()
     {
         _eventBus.UnsubscribeFrom<MatchSearchStarted>(OnMatchSearchStarted);
+        _eventBus.UnsubscribeFrom<BotMatchStarted>(OnBotMatchStarted);
         _eventBus.UnsubscribeFrom<MatchFailed>(OnMatchFailed);
     }
 
     private void Start()
     {
+        _deckBuilderRoot.SetActive(true);
         SpawnAllCards();
     }
 
     private void OnMatchSearchStarted(ref MatchSearchStarted _) => Hide();
+    private void OnBotMatchStarted(ref BotMatchStarted _) => Hide();
     private void OnMatchFailed(ref MatchFailed _) => Show();
 
     private void SpawnAllCards()
