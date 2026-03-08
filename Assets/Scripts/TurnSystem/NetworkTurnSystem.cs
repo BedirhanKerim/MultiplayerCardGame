@@ -11,6 +11,7 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
     [Inject] private DeckBuilderManager _deckBuilderManager;
     [Inject] private GameplayManager _gameplayManager;
     [Inject] private TurnConfigSO _config;
+    [Inject] private SkillConfigSO _skillConfig;
 
     [Networked] private int _currentTurn { get; set; }
     [Networked] private TurnPhase _phase { get; set; }
@@ -25,6 +26,20 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
     [Networked] private PlayerRef _player1 { get; set; }
     [Networked] private PlayerRef _player2 { get; set; }
 
+    // Skill networked properties
+    [Networked] private int _player1SkillType { get; set; }
+    [Networked] private int _player2SkillType { get; set; }
+    [Networked] private NetworkBool _player1UsedSkill { get; set; }
+    [Networked] private NetworkBool _player2UsedSkill { get; set; }
+    [Networked] private int _player1NextTurnAtkBoost { get; set; }
+    [Networked] private int _player2NextTurnAtkBoost { get; set; }
+
+    // Resolved card stats after skill application
+    [Networked] private int _resolvedP1Atk { get; set; }
+    [Networked] private int _resolvedP1Def { get; set; }
+    [Networked] private int _resolvedP2Atk { get; set; }
+    [Networked] private int _resolvedP2Def { get; set; }
+
     private ChangeDetector _changeDetector;
 
     public int CurrentTurn => _currentTurn;
@@ -32,6 +47,9 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
     public int PlayerHp => IsPlayer1() ? _player1Hp : _player2Hp;
     public int OpponentHp => IsPlayer1() ? _player2Hp : _player1Hp;
     public bool IsPlayerTurn => _phase == TurnPhase.Playing;
+
+    public SkillType AssignedSkill => (SkillType)(IsPlayer1() ? _player1SkillType : _player2SkillType);
+    public bool IsSkillUsed => IsPlayer1() ? (bool)_player1UsedSkill : (bool)_player2UsedSkill;
 
     public override void Spawned()
     {
@@ -49,6 +67,8 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
 
         _player1Hp = _config.StartingHp;
         _player2Hp = _config.StartingHp;
+        _player1NextTurnAtkBoost = 0;
+        _player2NextTurnAtkBoost = 0;
         _currentTurn = 0;
         StartNextTurn();
     }
@@ -60,6 +80,10 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
         _player2CardId = -1;
         _player1Confirmed = false;
         _player2Confirmed = false;
+        _player1UsedSkill = false;
+        _player2UsedSkill = false;
+        _player1SkillType = Random.Range(0, 6);
+        _player2SkillType = Random.Range(0, 6);
         _turnTimer = _config.TurnDuration;
         _phase = TurnPhase.Playing;
     }
@@ -82,6 +106,12 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
     {
         if (IsLocalConfirmed) return;
         RPC_ConfirmTurn();
+    }
+
+    public void UseSkill()
+    {
+        if (IsLocalConfirmed || IsSkillUsed) return;
+        RPC_UseSkill();
     }
 
     public void Tick(float deltaTime)
@@ -141,6 +171,24 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
         }
     }
 
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_UseSkill(RpcInfo info = default)
+    {
+        var source = GetSource(info);
+        if (_phase != TurnPhase.Playing) return;
+
+        if (source == _player1)
+        {
+            if ((bool)_player1Confirmed || (bool)_player1UsedSkill) return;
+            _player1UsedSkill = true;
+        }
+        else if (source == _player2)
+        {
+            if ((bool)_player2Confirmed || (bool)_player2UsedSkill) return;
+            _player2UsedSkill = true;
+        }
+    }
+
     public override void FixedUpdateNetwork()
     {
         if (!Object.HasStateAuthority) return;
@@ -176,6 +224,23 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
         CardInstance p1Card = FindCard(db, _player1CardId);
         CardInstance p2Card = FindCard(db, _player2CardId);
 
+        // Apply previous turn's Shield carry-over (Skill 6 next-turn ATK boost)
+        if (p1Card != null && _player1NextTurnAtkBoost > 0)
+            p1Card.CurrentAttack += _player1NextTurnAtkBoost;
+        if (p2Card != null && _player2NextTurnAtkBoost > 0)
+            p2Card.CurrentAttack += _player2NextTurnAtkBoost;
+        _player1NextTurnAtkBoost = 0;
+        _player2NextTurnAtkBoost = 0;
+
+        // Apply skill effects for Player 1
+        if ((bool)_player1UsedSkill)
+            ApplySkillEffects((SkillType)_player1SkillType, ref p1Card, ref p2Card, isPlayer1: true);
+
+        // Apply skill effects for Player 2
+        if ((bool)_player2UsedSkill)
+            ApplySkillEffects((SkillType)_player2SkillType, ref p2Card, ref p1Card, isPlayer1: false);
+
+        // Calculate damage
         int p1Damage = 0;
         int p2Damage = 0;
 
@@ -196,9 +261,57 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
             p2Damage = p1Card.CurrentAttack;
         }
 
+        // Apply Shield absorb
+        if ((bool)_player1UsedSkill && (SkillType)_player1SkillType == SkillType.Shield)
+        {
+            p1Damage = Mathf.Max(0, p1Damage - _skillConfig.ShieldAbsorb);
+            _player2NextTurnAtkBoost = _skillConfig.ShieldOpponentAttackBoost;
+        }
+        if ((bool)_player2UsedSkill && (SkillType)_player2SkillType == SkillType.Shield)
+        {
+            p2Damage = Mathf.Max(0, p2Damage - _skillConfig.ShieldAbsorb);
+            _player1NextTurnAtkBoost = _skillConfig.ShieldOpponentAttackBoost;
+        }
+
+        // Apply HealPlayer
+        if ((bool)_player1UsedSkill && (SkillType)_player1SkillType == SkillType.HealPlayer)
+            _player1Hp += _skillConfig.HealAmount;
+        if ((bool)_player2UsedSkill && (SkillType)_player2SkillType == SkillType.HealPlayer)
+            _player2Hp += _skillConfig.HealAmount;
+
+        // Store resolved card stats for clients
+        _resolvedP1Atk = p1Card != null ? p1Card.CurrentAttack : 0;
+        _resolvedP1Def = p1Card != null ? p1Card.CurrentDefense : 0;
+        _resolvedP2Atk = p2Card != null ? p2Card.CurrentAttack : 0;
+        _resolvedP2Def = p2Card != null ? p2Card.CurrentDefense : 0;
+
         _player1Hp = Mathf.Max(0, _player1Hp - p1Damage);
         _player2Hp = Mathf.Max(0, _player2Hp - p2Damage);
         _turnTimer = _config.ResolveDuration;
+    }
+
+    private void ApplySkillEffects(SkillType skill, ref CardInstance myCard, ref CardInstance oppCard, bool isPlayer1)
+    {
+        switch (skill)
+        {
+            case SkillType.BoostAttack:
+                if (myCard != null)
+                    myCard.CurrentAttack += _skillConfig.AttackBoost;
+                break;
+            case SkillType.BoostDefense:
+                if (myCard != null)
+                    myCard.CurrentDefense += _skillConfig.DefenseBoost;
+                break;
+            case SkillType.ReduceOpponentAttack:
+                if (oppCard != null)
+                    oppCard.CurrentAttack = Mathf.Max(0, oppCard.CurrentAttack - _skillConfig.OpponentAttackReduction);
+                break;
+            case SkillType.ReduceOpponentDefense:
+                if (oppCard != null)
+                    oppCard.CurrentDefense = Mathf.Max(0, oppCard.CurrentDefense - _skillConfig.OpponentDefenseReduction);
+                break;
+            // HealPlayer and Shield are handled separately in ResolveTurn
+        }
     }
 
     private CardInstance FindCard(CardDatabaseSO db, int cardId)
@@ -238,6 +351,15 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
                     if (IsLocalConfirmed)
                         _eventBus.Raise(new LocalPlayerConfirmed());
                     break;
+                case nameof(_player1SkillType):
+                case nameof(_player2SkillType):
+                    _eventBus.Raise(new SkillAssigned { Skill = AssignedSkill });
+                    break;
+                case nameof(_player1UsedSkill):
+                case nameof(_player2UsedSkill):
+                    if (IsSkillUsed)
+                        _eventBus.Raise(new SkillUsed());
+                    break;
             }
         }
     }
@@ -251,6 +373,19 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
             bool isP1 = IsPlayer1();
             var myCard = FindCard(db, isP1 ? _player1CardId : _player2CardId);
             var oppCard = FindCard(db, isP1 ? _player2CardId : _player1CardId);
+
+            // Apply resolved stats from host
+            if (myCard != null)
+            {
+                myCard.CurrentAttack = isP1 ? _resolvedP1Atk : _resolvedP2Atk;
+                myCard.CurrentDefense = isP1 ? _resolvedP1Def : _resolvedP2Def;
+            }
+            if (oppCard != null)
+            {
+                oppCard.CurrentAttack = isP1 ? _resolvedP2Atk : _resolvedP1Atk;
+                oppCard.CurrentDefense = isP1 ? _resolvedP2Def : _resolvedP1Def;
+            }
+
             Debug.Log($"[NTS] SimResult: isP1={isP1}, myCard={myCard?.Data.CardId}, oppCard={oppCard?.Data.CardId}, P1Hp={_player1Hp}, P2Hp={_player2Hp}");
 
             _eventBus.Raise(new TurnEnded { TurnNumber = _currentTurn });

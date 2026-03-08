@@ -24,5 +24,8 @@ public struct SimulationResult
 public struct GameOver { public bool PlayerWon; public bool IsDraw; }
 public struct OpponentCardChanged { public CardInstance Card; }
 public struct LocalPlayerConfirmed { }
+public struct SkillAssigned { public SkillType Skill; }
+public struct SkillUseRequested { }
+public struct SkillUsed { }
 
 public class GameEventBus : GenericEventBus<object> { }

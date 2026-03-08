@@ -7,6 +7,7 @@ public class GameplayManager : MonoBehaviour
     [Inject] private GameEventBus _eventBus;
     [Inject] private HandLayoutManager _handLayout;
     [Inject] private DeckBuilderManager _deckBuilderManager;
+    [Inject] private SkillConfigSO _skillConfig;
 
     [Header("Table")]
     [SerializeField] private Transform _playerCardLocation;
@@ -33,6 +34,7 @@ public class GameplayManager : MonoBehaviour
         _eventBus.SubscribeTo<TurnEnded>(OnTurnEnded);
         _eventBus.SubscribeTo<SimulationResult>(OnSimulationResult);
         _eventBus.SubscribeTo<TurnConfirmRequested>(OnTurnConfirmRequested);
+        _eventBus.SubscribeTo<SkillUseRequested>(OnSkillUseRequested);
         _eventBus.SubscribeTo<OpponentCardChanged>(OnOpponentCardChanged);
         _eventBus.SubscribeTo<TurnTimerUpdated>(OnTurnTimerUpdated);
     }
@@ -44,6 +46,7 @@ public class GameplayManager : MonoBehaviour
         _eventBus.UnsubscribeFrom<TurnEnded>(OnTurnEnded);
         _eventBus.UnsubscribeFrom<SimulationResult>(OnSimulationResult);
         _eventBus.UnsubscribeFrom<TurnConfirmRequested>(OnTurnConfirmRequested);
+        _eventBus.UnsubscribeFrom<SkillUseRequested>(OnSkillUseRequested);
         _eventBus.UnsubscribeFrom<OpponentCardChanged>(OnOpponentCardChanged);
         _eventBus.UnsubscribeFrom<TurnTimerUpdated>(OnTurnTimerUpdated);
         UnsubscribeFromCards();
@@ -87,6 +90,15 @@ public class GameplayManager : MonoBehaviour
     private void OnSimulationResult(ref SimulationResult e)
     {
         Debug.Log($"[GM] OnSimulationResult: OppCard={e.OpponentCard?.Data.CardId}, PlayerHp={e.PlayerHp}, OppHp={e.OpponentHp}");
+
+        if (_playedCard != null && e.PlayerCard != null)
+        {
+            _playedCard.CardView.Setup(e.PlayerCard);
+        }
+        if (_opponentCardUnit != null && e.OpponentCard != null)
+        {
+            _opponentCardUnit.CardView.Setup(e.OpponentCard);
+        }
     }
 
     private void OnOpponentCardChanged(ref OpponentCardChanged e)
@@ -139,6 +151,13 @@ public class GameplayManager : MonoBehaviour
     {
         _turnSystem?.ConfirmTurn();
     }
+
+    private void OnSkillUseRequested(ref SkillUseRequested _)
+    {
+        _turnSystem?.UseSkill();
+    }
+
+
 
     private void SubscribeToCards()
     {

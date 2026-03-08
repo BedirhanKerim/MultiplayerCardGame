@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0420d196d50d87243abb406dece3adf4, type: 3}
+  m_Name: SkillConfigSO
+  m_EditorClassIdentifier: 
+  HealAmount: 5
+  AttackBoost: 3
+  DefenseBoost: 3
+  OpponentAttackReduction: 2
+  OpponentDefenseReduction: 2
+  ShieldAbsorb: 4
+  ShieldOpponentAttackBoost: 3

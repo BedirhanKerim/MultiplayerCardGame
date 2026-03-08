@@ -11,6 +11,7 @@ public class GameLifetimeScope : LifetimeScope
     [SerializeField] private InputRaycaster _inputRaycaster;
     [SerializeField] private NetworkTurnSystem _networkTurnSystem;
     [SerializeField] private TurnConfigSO _turnConfig;
+    [SerializeField] private SkillConfigSO _skillConfig;
     protected override void Configure(IContainerBuilder builder)
     {
         builder.Register<GameEventBus>(Lifetime.Singleton);
@@ -23,5 +24,6 @@ public class GameLifetimeScope : LifetimeScope
         builder.RegisterComponent(_networkTurnSystem);
         builder.Register<BotOpponent>(Lifetime.Singleton).As<IOpponent>();
         builder.RegisterInstance(_turnConfig);
+        builder.RegisterInstance(_skillConfig);
     }
 }

@@ -19,9 +19,14 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _turnText;
     [SerializeField] private TextMeshProUGUI _timerText;
 
+    [Header("Skill")]
+    [SerializeField] private TextMeshProUGUI _skillDescriptionText;
+    [SerializeField] private Button _useSkillButton;
+
     [Inject] private INetworkManager _networkManager;
     [Inject] private GameEventBus _eventBus;
     [Inject] private DeckBuilderManager _deckBuilderManager;
+    [Inject] private SkillConfigSO _skillConfig;
 
     private void Awake()
     {
@@ -37,6 +42,7 @@ public class UIManager : MonoBehaviour
         _quickMatchButton.onClick.AddListener(OnQuickMatchClicked);
         _playerVsBotButton.onClick.AddListener(OnPlayerVsBotClicked);
         _confirmTurnButton.onClick.AddListener(OnConfirmTurnClicked);
+        if (_useSkillButton != null) _useSkillButton.onClick.AddListener(OnUseSkillClicked);
         _deckBuilderManager.OnSelectionChanged += OnDeckSelectionChanged;
         _eventBus.SubscribeTo<MatchSearchStarted>(OnMatchSearchStarted);
         _eventBus.SubscribeTo<MatchFound>(OnMatchFound);
@@ -46,6 +52,8 @@ public class UIManager : MonoBehaviour
         _eventBus.SubscribeTo<SimulationResult>(OnSimulationResult);
         _eventBus.SubscribeTo<GameOver>(OnGameOver);
         _eventBus.SubscribeTo<LocalPlayerConfirmed>(OnLocalPlayerConfirmed);
+        _eventBus.SubscribeTo<SkillAssigned>(OnSkillAssigned);
+        _eventBus.SubscribeTo<SkillUsed>(OnSkillUsed);
     }
 
     private void OnDisable()
@@ -53,6 +61,7 @@ public class UIManager : MonoBehaviour
         _quickMatchButton.onClick.RemoveListener(OnQuickMatchClicked);
         _playerVsBotButton.onClick.RemoveListener(OnPlayerVsBotClicked);
         _confirmTurnButton.onClick.RemoveListener(OnConfirmTurnClicked);
+        if (_useSkillButton != null) _useSkillButton.onClick.RemoveListener(OnUseSkillClicked);
         _deckBuilderManager.OnSelectionChanged -= OnDeckSelectionChanged;
         _eventBus.UnsubscribeFrom<MatchSearchStarted>(OnMatchSearchStarted);
         _eventBus.UnsubscribeFrom<MatchFound>(OnMatchFound);
@@ -62,6 +71,8 @@ public class UIManager : MonoBehaviour
         _eventBus.UnsubscribeFrom<SimulationResult>(OnSimulationResult);
         _eventBus.UnsubscribeFrom<GameOver>(OnGameOver);
         _eventBus.UnsubscribeFrom<LocalPlayerConfirmed>(OnLocalPlayerConfirmed);
+        _eventBus.UnsubscribeFrom<SkillAssigned>(OnSkillAssigned);
+        _eventBus.UnsubscribeFrom<SkillUsed>(OnSkillUsed);
     }
 
     private void OnDeckSelectionChanged()
@@ -94,6 +105,7 @@ public class UIManager : MonoBehaviour
     {
         _turnText.text = $"Turn {e.TurnNumber}";
         _confirmTurnButton.interactable = true;
+        if (_useSkillButton != null) _useSkillButton.interactable = true;
     }
 
     private void OnTurnTimerUpdated(ref TurnTimerUpdated e)
@@ -123,6 +135,23 @@ public class UIManager : MonoBehaviour
     private void OnLocalPlayerConfirmed(ref LocalPlayerConfirmed _)
     {
         _confirmTurnButton.interactable = false;
+        if (_useSkillButton != null) _useSkillButton.interactable = false;
+    }
+
+    private void OnSkillAssigned(ref SkillAssigned e)
+    {
+        if (_skillDescriptionText != null) _skillDescriptionText.text = _skillConfig.GetDescription(e.Skill);
+        if (_useSkillButton != null) _useSkillButton.interactable = true;
+    }
+
+    private void OnSkillUsed(ref SkillUsed _)
+    {
+        if (_useSkillButton != null) _useSkillButton.interactable = false;
+    }
+
+    private void OnUseSkillClicked()
+    {
+        _eventBus.Raise(new SkillUseRequested());
     }
 
     private void ShowGameplayPanel()
