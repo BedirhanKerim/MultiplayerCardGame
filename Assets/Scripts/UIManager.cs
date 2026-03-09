@@ -103,10 +103,9 @@ public class UIManager : MonoBehaviour
 
     private void OnPlayerVsBotClicked()
     {
-        _eventBus.Raise(new BotMatchStarted());
-        _eventBus.Raise(new GameStateChanged { State = GameState.Gameplay });
         SetButtonsInteractable(false);
         ShowGameplayPanel();
+        _eventBus.Raise(new BotMatchStarted());
     }
 
     private void OnConfirmTurnClicked()
@@ -124,7 +123,8 @@ public class UIManager : MonoBehaviour
     private void OnTurnTimerUpdated(ref TurnTimerUpdated e)
     {
         int seconds = Mathf.CeilToInt(e.RemainingTime);
-        _timerText.text = seconds.ToString();
+        _timerText.text = seconds + "s";
+        _timerText.color = seconds <= 15 ? Color.red : Color.white;
     }
 
     private void OnSimulationResult(ref SimulationResult e)

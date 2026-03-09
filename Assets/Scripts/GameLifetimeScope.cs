@@ -23,6 +23,7 @@ public class GameLifetimeScope : LifetimeScope
         builder.RegisterComponent(_inputRaycaster);
         builder.RegisterComponent(_networkTurnSystem);
         builder.Register<BotOpponent>(Lifetime.Singleton).As<IOpponent>();
+        builder.RegisterEntryPoint<LocalTurnSystem>().AsSelf();
         builder.RegisterInstance(_turnConfig);
         builder.RegisterInstance(_skillConfig);
     }

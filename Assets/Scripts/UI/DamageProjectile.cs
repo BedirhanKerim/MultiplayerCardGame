@@ -58,6 +58,7 @@ public class DamageProjectile : MonoBehaviour
 
         var start = transform.position;
         var end = _waypoints[_currentWaypoint];
+        end.y += 1f;
         float distance = Vector3.Distance(start, end);
         float duration = distance / _speed;
         var mid = (start + end) * 0.5f;
@@ -65,7 +66,7 @@ public class DamageProjectile : MonoBehaviour
 
         var path = new[] { mid, end };
         transform.DOPath(path, duration, PathType.CatmullRom)
-            .SetEase(Ease.InOutSine)
+            .SetEase(Ease.InQuad)
             .OnComplete(() =>
             {
                 _currentWaypoint++;
