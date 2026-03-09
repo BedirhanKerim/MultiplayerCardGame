@@ -278,9 +278,9 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
 
         // Apply HealPlayer
         if ((bool)_player1UsedSkill && (SkillType)_player1SkillType == SkillType.HealPlayer)
-            _player1Hp += _skillConfig.HealAmount;
+            _player1Hp = Mathf.Min(_config.StartingHp, _player1Hp + _skillConfig.HealAmount);
         if ((bool)_player2UsedSkill && (SkillType)_player2SkillType == SkillType.HealPlayer)
-            _player2Hp += _skillConfig.HealAmount;
+            _player2Hp = Mathf.Min(_config.StartingHp, _player2Hp + _skillConfig.HealAmount);
 
         // Store resolved card stats and damage for clients
         _resolvedP1Atk = p1Card != null ? p1Card.CurrentAttack : 0;
