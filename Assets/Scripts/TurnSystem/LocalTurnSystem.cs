@@ -243,11 +243,17 @@ public class LocalTurnSystem : ITurnSystem, IStartable
 
         // Apply HealPlayer
         if (_isSkillUsed && _assignedSkill == SkillType.HealPlayer)
+        {
             PlayerHp = Mathf.Min(_config.StartingHp, PlayerHp + _skillConfig.HealAmount);
+            _eventBus.Raise(new HpDamageApplied { IsPlayer = true, NewHp = PlayerHp });
+        }
 
         // Apply bot HealPlayer
         if (_botUsedSkill && _botSkill == SkillType.HealPlayer)
+        {
             OpponentHp = Mathf.Min(_config.StartingHp, OpponentHp + _skillConfig.HealAmount);
+            _eventBus.Raise(new HpDamageApplied { IsPlayer = false, NewHp = OpponentHp });
+        }
 
         PlayerHp = Mathf.Max(0, PlayerHp - playerDamage);
         OpponentHp = Mathf.Max(0, OpponentHp - opponentDamage);
