@@ -18,8 +18,10 @@ public class GameplayManager : MonoBehaviour
     [SerializeField] private float _snapDuration = 0.25f;
     [SerializeField] private float _flipDuration = 0.4f;
 
-    [Header("Damage Popup")]
-    [SerializeField] private DamagePopup _damagePopupPrefab;
+    [Header("Damage Projectile")]
+    [SerializeField] private DamageProjectile _damageProjectilePrefab;
+    [SerializeField] private Transform _playerHpLocation;
+    [SerializeField] private Transform _opponentHpLocation;
 
     private ITurnSystem _turnSystem;
     private Quaternion _faceDownRotation;
@@ -114,10 +116,35 @@ public class GameplayManager : MonoBehaviour
             _opponentCardUnit.transform.DORotateQuaternion(_faceUpRotation, _flipDuration).SetEase(Ease.OutBack);
         }
 
-        if (e.PlayerDamage > 0)
-            SpawnDamagePopup(e.PlayerDamage, _playerCardLocation.position);
-        if (e.OpponentDamage > 0)
-            SpawnDamagePopup(e.OpponentDamage, _opponentCardLocation.position);
+        bool canShootPlayer = _playedCard != null && _opponentCardUnit != null;
+
+        // Player's card attacks opponent
+        if (canShootPlayer && _opponentHpLocation != null)
+        {
+            int oppHp = e.OpponentHp;
+            int playerAtk = e.PlayerCard != null ? e.PlayerCard.CurrentAttack : 0;
+            bool pierces = e.OpponentDamage > 0;
+            SpawnDamageProjectile(playerAtk, e.OpponentDamage,
+                _playedCard.CardView.AttackTransform.position,
+                _opponentCardUnit.CardView.DefenseTransform.position,
+                pierces ? _opponentHpLocation.position : Vector3.zero,
+                pierces,
+                pierces ? () => _eventBus.Raise(new HpDamageApplied { IsPlayer = false, NewHp = oppHp }) : null);
+        }
+
+        // Opponent's card attacks player
+        if (canShootPlayer && _playerHpLocation != null)
+        {
+            int playerHp = e.PlayerHp;
+            int oppAtk = e.OpponentCard != null ? e.OpponentCard.CurrentAttack : 0;
+            bool pierces = e.PlayerDamage > 0;
+            SpawnDamageProjectile(oppAtk, e.PlayerDamage,
+                _opponentCardUnit.CardView.AttackTransform.position,
+                _playedCard.CardView.DefenseTransform.position,
+                pierces ? _playerHpLocation.position : Vector3.zero,
+                pierces,
+                pierces ? () => _eventBus.Raise(new HpDamageApplied { IsPlayer = true, NewHp = playerHp }) : null);
+        }
     }
 
     private void OnOpponentCardChanged(ref OpponentCardChanged e)
@@ -215,11 +242,11 @@ public class GameplayManager : MonoBehaviour
         card.transform.DORotateQuaternion(_faceUpRotation, _snapDuration);
     }
 
-    private void SpawnDamagePopup(int damage, Vector3 position)
+    private void SpawnDamageProjectile(int attack, int damage, Vector3 attackPos, Vector3 defensePos, Vector3 hpPos, bool pierces, System.Action onHit = null)
     {
-        if (_damagePopupPrefab == null) return;
-        var popup = Instantiate(_damagePopupPrefab, position, Quaternion.identity);
-        popup.Play(damage);
+        if (_damageProjectilePrefab == null) return;
+        var projectile = Instantiate(_damageProjectilePrefab, attackPos, Quaternion.identity);
+        projectile.Play(attack, damage, attackPos, defensePos, hpPos, pierces, onHit);
     }
 
     private void ReturnCardToHand(CardUnit card)

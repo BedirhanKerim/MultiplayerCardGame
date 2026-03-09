@@ -27,5 +27,6 @@ public struct LocalPlayerConfirmed { }
 public struct SkillAssigned { public SkillType Skill; }
 public struct SkillUseRequested { }
 public struct SkillUsed { }
+public struct HpDamageApplied { public bool IsPlayer; public int NewHp; }
 
 public class GameEventBus : GenericEventBus<object> { }

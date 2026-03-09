@@ -11,6 +11,8 @@ public class CardView : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _defenseText;
 
     public CardInstance CardInstance { get; private set; }
+    public Transform AttackTransform => _attackText.transform;
+    public Transform DefenseTransform => _defenseText.transform;
 
     public void Setup(CardInstance cardInstance)
     {

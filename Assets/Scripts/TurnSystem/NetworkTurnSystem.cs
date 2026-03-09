@@ -39,6 +39,8 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
     [Networked] private int _resolvedP1Def { get; set; }
     [Networked] private int _resolvedP2Atk { get; set; }
     [Networked] private int _resolvedP2Def { get; set; }
+    [Networked] private int _resolvedP1Damage { get; set; }
+    [Networked] private int _resolvedP2Damage { get; set; }
 
     private ChangeDetector _changeDetector;
     private TurnPhase _lastKnownPhase;
@@ -280,11 +282,13 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
         if ((bool)_player2UsedSkill && (SkillType)_player2SkillType == SkillType.HealPlayer)
             _player2Hp += _skillConfig.HealAmount;
 
-        // Store resolved card stats for clients
+        // Store resolved card stats and damage for clients
         _resolvedP1Atk = p1Card != null ? p1Card.CurrentAttack : 0;
         _resolvedP1Def = p1Card != null ? p1Card.CurrentDefense : 0;
         _resolvedP2Atk = p2Card != null ? p2Card.CurrentAttack : 0;
         _resolvedP2Def = p2Card != null ? p2Card.CurrentDefense : 0;
+        _resolvedP1Damage = p1Damage;
+        _resolvedP2Damage = p2Damage;
 
         _player1Hp = Mathf.Max(0, _player1Hp - p1Damage);
         _player2Hp = Mathf.Max(0, _player2Hp - p2Damage);
@@ -396,13 +400,16 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
 
             Debug.Log($"[NTS] SimResult: isP1={isP1}, myCard={myCard?.Data.CardId}, oppCard={oppCard?.Data.CardId}, P1Hp={_player1Hp}, P2Hp={_player2Hp}");
 
+            int playerDmg = isP1 ? _resolvedP1Damage : _resolvedP2Damage;
+            int opponentDmg = isP1 ? _resolvedP2Damage : _resolvedP1Damage;
+
             _eventBus.Raise(new TurnEnded { TurnNumber = _currentTurn });
             _eventBus.Raise(new SimulationResult
             {
                 PlayerCard = myCard,
                 OpponentCard = oppCard,
-                PlayerDamage = 0,
-                OpponentDamage = 0,
+                PlayerDamage = playerDmg,
+                OpponentDamage = opponentDmg,
                 PlayerHp = PlayerHp,
                 OpponentHp = OpponentHp
             });

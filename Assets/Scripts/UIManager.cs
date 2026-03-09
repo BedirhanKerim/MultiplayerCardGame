@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -63,6 +64,7 @@ public class UIManager : MonoBehaviour
         _eventBus.SubscribeTo<LocalPlayerConfirmed>(OnLocalPlayerConfirmed);
         _eventBus.SubscribeTo<SkillAssigned>(OnSkillAssigned);
         _eventBus.SubscribeTo<SkillUsed>(OnSkillUsed);
+        _eventBus.SubscribeTo<HpDamageApplied>(OnHpDamageApplied);
     }
 
     private void OnDisable()
@@ -83,6 +85,7 @@ public class UIManager : MonoBehaviour
         _eventBus.UnsubscribeFrom<LocalPlayerConfirmed>(OnLocalPlayerConfirmed);
         _eventBus.UnsubscribeFrom<SkillAssigned>(OnSkillAssigned);
         _eventBus.UnsubscribeFrom<SkillUsed>(OnSkillUsed);
+        _eventBus.UnsubscribeFrom<HpDamageApplied>(OnHpDamageApplied);
     }
 
     private void OnDeckSelectionChanged()
@@ -126,9 +129,30 @@ public class UIManager : MonoBehaviour
 
     private void OnSimulationResult(ref SimulationResult e)
     {
-        _playerHpText.text = e.PlayerHp.ToString();
-        _opponentHpText.text = e.OpponentHp.ToString();
         _confirmTurnButton.interactable = false;
+    }
+
+    private void OnHpDamageApplied(ref HpDamageApplied e)
+    {
+        if (e.IsPlayer)
+        {
+            _playerHpText.text = e.NewHp.ToString();
+            ShakeHpText(_playerHpText);
+        }
+        else
+        {
+            _opponentHpText.text = e.NewHp.ToString();
+            ShakeHpText(_opponentHpText);
+        }
+    }
+
+    private void ShakeHpText(TextMeshProUGUI text)
+    {
+        text.DOKill();
+        text.transform.DOKill();
+        text.color = Color.red;
+        text.DOColor(Color.white, 0.6f).SetDelay(0.2f);
+        text.transform.DOShakePosition(0.3f, 0.05f, 8);
     }
 
     private void OnGameOver(ref GameOver e)
