@@ -1,4 +1,5 @@
 using DG.Tweening;
+using Lean.Pool;
 using TMPro;
 using UnityEngine;
 
@@ -21,6 +22,6 @@ public class DamagePopup : MonoBehaviour
         target.z += RiseHeight;
         seq.Append(transform.DOMove(target, Duration).SetEase(Ease.OutSine));
         seq.Insert(Duration * 0.5f, _text.DOFade(0f, Duration * 0.5f));
-        seq.OnComplete(() => Destroy(gameObject));
+        seq.OnComplete(() => LeanPool.Despawn(gameObject));
     }
 }

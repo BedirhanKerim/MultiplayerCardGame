@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Lean.Pool;
 using UnityEngine;
 using VContainer;
 
@@ -77,7 +78,7 @@ public class DeckBuilderManager : MonoBehaviour
         var cards = _cardDatabase.Cards;
         for (int i = 0; i < cards.Count; i++)
         {
-            var cardUnit = Instantiate(_cardPrefab);
+            var cardUnit = LeanPool.Spawn(_cardPrefab);
             cardUnit.CardView.Setup(new CardInstance(cards[i]));
 
             if (i < _inventorySlots.Length)

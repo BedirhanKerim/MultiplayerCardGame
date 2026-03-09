@@ -1,4 +1,5 @@
 using DG.Tweening;
+using Lean.Pool;
 using UnityEngine;
 using VContainer;
 
@@ -159,7 +160,7 @@ public class GameplayManager : MonoBehaviour
     {
         if (_opponentCardUnit == null)
         {
-            _opponentCardUnit = Instantiate(_deckBuilderManager.CardPrefab);
+            _opponentCardUnit = LeanPool.Spawn(_deckBuilderManager.CardPrefab);
             _opponentCardUnit.Interactable = false;
         }
         _opponentCardUnit.gameObject.SetActive(false);
@@ -245,7 +246,7 @@ public class GameplayManager : MonoBehaviour
     private void SpawnDamageProjectile(int attack, int damage, Vector3 attackPos, Vector3 defensePos, Vector3 hpPos, bool pierces, System.Action onHit = null)
     {
         if (_damageProjectilePrefab == null) return;
-        var projectile = Instantiate(_damageProjectilePrefab, attackPos, Quaternion.identity);
+        var projectile = LeanPool.Spawn(_damageProjectilePrefab, attackPos, Quaternion.identity);
         projectile.Play(attack, damage, attackPos, defensePos, hpPos, pierces, onHit);
     }
 

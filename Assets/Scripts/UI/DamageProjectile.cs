@@ -1,5 +1,6 @@
 using System;
 using DG.Tweening;
+using Lean.Pool;
 using TMPro;
 using UnityEngine;
 
@@ -46,11 +47,11 @@ public class DamageProjectile : MonoBehaviour
         {
             if (_pierces && _damagePopupPrefab != null)
             {
-                var popup = Instantiate(_damagePopupPrefab, transform.position, Quaternion.identity);
+                var popup = LeanPool.Spawn(_damagePopupPrefab, transform.position, Quaternion.identity);
                 popup.Play(_damage);
             }
             _onComplete?.Invoke();
-            Destroy(gameObject);
+            LeanPool.Despawn(gameObject);
             return;
         }
 
