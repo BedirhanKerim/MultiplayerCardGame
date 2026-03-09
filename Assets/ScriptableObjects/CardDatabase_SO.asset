@@ -17,49 +17,49 @@ MonoBehaviour:
     _cardName: Knight
     _attack: 7
     _defense: 5
-    _cardSprite: {fileID: 0}
+    _cardSprite: {fileID: 21300000, guid: 3d2dd66396bcebb48ac7a7b496d3b213, type: 3}
   - _cardId: 1
     _cardName: Guardian
     _attack: 3
     _defense: 9
-    _cardSprite: {fileID: 0}
+    _cardSprite: {fileID: 21300000, guid: 3d2dd66396bcebb48ac7a7b496d3b213, type: 3}
   - _cardId: 2
     _cardName: Assassin
     _attack: 9
     _defense: 2
-    _cardSprite: {fileID: 0}
+    _cardSprite: {fileID: 21300000, guid: 3d2dd66396bcebb48ac7a7b496d3b213, type: 3}
   - _cardId: 3
     _cardName: Paladin
     _attack: 5
     _defense: 7
-    _cardSprite: {fileID: 0}
+    _cardSprite: {fileID: 21300000, guid: 3d2dd66396bcebb48ac7a7b496d3b213, type: 3}
   - _cardId: 4
     _cardName: Berserker
     _attack: 10
     _defense: 1
-    _cardSprite: {fileID: 0}
+    _cardSprite: {fileID: 21300000, guid: 3d2dd66396bcebb48ac7a7b496d3b213, type: 3}
   - _cardId: 5
     _cardName: Archer
     _attack: 6
     _defense: 4
-    _cardSprite: {fileID: 0}
+    _cardSprite: {fileID: 21300000, guid: 3d2dd66396bcebb48ac7a7b496d3b213, type: 3}
   - _cardId: 6
     _cardName: Mage
     _attack: 8
     _defense: 3
-    _cardSprite: {fileID: 0}
+    _cardSprite: {fileID: 21300000, guid: 3d2dd66396bcebb48ac7a7b496d3b213, type: 3}
   - _cardId: 7
     _cardName: Fortress
     _attack: 2
     _defense: 10
-    _cardSprite: {fileID: 0}
+    _cardSprite: {fileID: 21300000, guid: 3d2dd66396bcebb48ac7a7b496d3b213, type: 3}
   - _cardId: 8
     _cardName: Dragon
     _attack: 8
     _defense: 6
-    _cardSprite: {fileID: 0}
+    _cardSprite: {fileID: 21300000, guid: 3d2dd66396bcebb48ac7a7b496d3b213, type: 3}
   - _cardId: 9
     _cardName: Warlock
     _attack: 6
     _defense: 6
-    _cardSprite: {fileID: 0}
+    _cardSprite: {fileID: 21300000, guid: 3d2dd66396bcebb48ac7a7b496d3b213, type: 3}
