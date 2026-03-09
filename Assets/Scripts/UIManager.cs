@@ -13,6 +13,7 @@ public class UIManager : MonoBehaviour
 
     [Header("Gameplay")]
     [SerializeField] private GameObject _gameplayPanel;
+    [SerializeField] private GameObject _gameplayWorldCanvas;
     [SerializeField] private Button _confirmTurnButton;
     [SerializeField] private TextMeshProUGUI _playerHpText;
     [SerializeField] private TextMeshProUGUI _opponentHpText;
@@ -22,6 +23,11 @@ public class UIManager : MonoBehaviour
     [Header("Skill")]
     [SerializeField] private TextMeshProUGUI _skillDescriptionText;
     [SerializeField] private Button _useSkillButton;
+
+    [Header("End Game")]
+    [SerializeField] private GameObject _endGamePanel;
+    [SerializeField] private TextMeshProUGUI _endGameResultText;
+    [SerializeField] private Button _mainMenuButton;
 
     [Inject] private INetworkManager _networkManager;
     [Inject] private GameEventBus _eventBus;
@@ -33,6 +39,8 @@ public class UIManager : MonoBehaviour
         _deckBuilderPanel.SetActive(true);
         _waitingForOpponentPanel.SetActive(false);
         _gameplayPanel.SetActive(false);
+        if (_gameplayWorldCanvas != null) _gameplayWorldCanvas.SetActive(false);
+        if (_endGamePanel != null) _endGamePanel.SetActive(false);
         _quickMatchButton.interactable = false;
         _playerVsBotButton.interactable = false;
     }
@@ -43,6 +51,7 @@ public class UIManager : MonoBehaviour
         _playerVsBotButton.onClick.AddListener(OnPlayerVsBotClicked);
         _confirmTurnButton.onClick.AddListener(OnConfirmTurnClicked);
         if (_useSkillButton != null) _useSkillButton.onClick.AddListener(OnUseSkillClicked);
+        if (_mainMenuButton != null) _mainMenuButton.onClick.AddListener(OnMainMenuClicked);
         _deckBuilderManager.OnSelectionChanged += OnDeckSelectionChanged;
         _eventBus.SubscribeTo<MatchSearchStarted>(OnMatchSearchStarted);
         _eventBus.SubscribeTo<MatchFound>(OnMatchFound);
@@ -62,6 +71,7 @@ public class UIManager : MonoBehaviour
         _playerVsBotButton.onClick.RemoveListener(OnPlayerVsBotClicked);
         _confirmTurnButton.onClick.RemoveListener(OnConfirmTurnClicked);
         if (_useSkillButton != null) _useSkillButton.onClick.RemoveListener(OnUseSkillClicked);
+        if (_mainMenuButton != null) _mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
         _deckBuilderManager.OnSelectionChanged -= OnDeckSelectionChanged;
         _eventBus.UnsubscribeFrom<MatchSearchStarted>(OnMatchSearchStarted);
         _eventBus.UnsubscribeFrom<MatchFound>(OnMatchFound);
@@ -124,12 +134,23 @@ public class UIManager : MonoBehaviour
     private void OnGameOver(ref GameOver e)
     {
         _confirmTurnButton.interactable = false;
+        if (_useSkillButton != null) _useSkillButton.interactable = false;
+
+        string result;
         if (e.IsDraw)
-            _turnText.text = "Draw!";
+            result = "Draw!";
         else if (e.PlayerWon)
-            _turnText.text = "You Win!";
+            result = "You Win!";
         else
-            _turnText.text = "You Lose!";
+            result = "You Lose!";
+
+        _turnText.text = result;
+
+        if (_endGamePanel != null)
+        {
+            _endGamePanel.SetActive(true);
+            if (_endGameResultText != null) _endGameResultText.text = result;
+        }
     }
 
     private void OnLocalPlayerConfirmed(ref LocalPlayerConfirmed _)
@@ -154,10 +175,16 @@ public class UIManager : MonoBehaviour
         _eventBus.Raise(new SkillUseRequested());
     }
 
+    private void OnMainMenuClicked()
+    {
+        _networkManager.Disconnect();
+    }
+
     private void ShowGameplayPanel()
     {
         _deckBuilderPanel.SetActive(false);
         _gameplayPanel.SetActive(true);
+        if (_gameplayWorldCanvas != null) _gameplayWorldCanvas.SetActive(true);
     }
 
     private void OnMatchSearchStarted(ref MatchSearchStarted _)

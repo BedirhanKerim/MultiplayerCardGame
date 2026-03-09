@@ -16,8 +16,14 @@ public class GameplayManager : MonoBehaviour
 
     [Header("Animation")]
     [SerializeField] private float _snapDuration = 0.25f;
+    [SerializeField] private float _flipDuration = 0.4f;
+
+    [Header("Damage Popup")]
+    [SerializeField] private DamagePopup _damagePopupPrefab;
 
     private ITurnSystem _turnSystem;
+    private Quaternion _faceDownRotation;
+    private Quaternion _faceUpRotation;
     private CardUnit _playedCard;
     private CardUnit _opponentCardUnit;
     private bool _isActive;
@@ -25,6 +31,12 @@ public class GameplayManager : MonoBehaviour
     public void SetTurnSystem(ITurnSystem turnSystem)
     {
         _turnSystem = turnSystem;
+    }
+
+    private void Awake()
+    {
+        _faceDownRotation = Quaternion.Euler(270f, 270f, 270f);
+        _faceUpRotation = Quaternion.Euler(90f, 0f, 0f);
     }
 
     private void OnEnable()
@@ -98,7 +110,14 @@ public class GameplayManager : MonoBehaviour
         if (_opponentCardUnit != null && e.OpponentCard != null)
         {
             _opponentCardUnit.CardView.Setup(e.OpponentCard);
+            _opponentCardUnit.transform.DOKill();
+            _opponentCardUnit.transform.DORotateQuaternion(_faceUpRotation, _flipDuration).SetEase(Ease.OutBack);
         }
+
+        if (e.PlayerDamage > 0)
+            SpawnDamagePopup(e.PlayerDamage, _playerCardLocation.position);
+        if (e.OpponentDamage > 0)
+            SpawnDamagePopup(e.OpponentDamage, _opponentCardLocation.position);
     }
 
     private void OnOpponentCardChanged(ref OpponentCardChanged e)
@@ -124,7 +143,7 @@ public class GameplayManager : MonoBehaviour
         _opponentCardUnit.CardView.Setup(card);
         _opponentCardUnit.gameObject.SetActive(true);
         _opponentCardUnit.transform.position = _opponentCardLocation.position;
-        _opponentCardUnit.transform.rotation = _opponentCardLocation.rotation;
+        _opponentCardUnit.transform.rotation = _faceDownRotation;
     }
 
     private void HideOpponentCard()
@@ -149,6 +168,7 @@ public class GameplayManager : MonoBehaviour
 
     private void OnTurnConfirmRequested(ref TurnConfirmRequested _)
     {
+        if (_playedCard == null) return;
         _turnSystem?.ConfirmTurn();
     }
 
@@ -192,7 +212,14 @@ public class GameplayManager : MonoBehaviour
 
         card.transform.DOKill();
         card.transform.DOMove(_playerCardLocation.position, _snapDuration);
-        card.transform.DORotateQuaternion(_playerCardLocation.rotation, _snapDuration);
+        card.transform.DORotateQuaternion(_faceUpRotation, _snapDuration);
+    }
+
+    private void SpawnDamagePopup(int damage, Vector3 position)
+    {
+        if (_damagePopupPrefab == null) return;
+        var popup = Instantiate(_damagePopupPrefab, position, Quaternion.identity);
+        popup.Play(damage);
     }
 
     private void ReturnCardToHand(CardUnit card)

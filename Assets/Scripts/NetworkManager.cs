@@ -46,6 +46,16 @@ public class NetworkManager : MonoBehaviour, INetworkManager, INetworkRunnerCall
         }
     }
 
+    public async void Disconnect()
+    {
+        if (_runner != null)
+        {
+            await _runner.Shutdown();
+        }
+        CleanupRunner();
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
     private void CleanupRunner()
     {
         if (_runner != null)

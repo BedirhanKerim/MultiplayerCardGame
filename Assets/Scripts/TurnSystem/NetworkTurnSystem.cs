@@ -41,6 +41,7 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
     [Networked] private int _resolvedP2Def { get; set; }
 
     private ChangeDetector _changeDetector;
+    private TurnPhase _lastKnownPhase;
 
     public int CurrentTurn => _currentTurn;
     public int MaxTurns => _config != null ? _config.MaxTurns : 6;
@@ -329,6 +330,13 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
     {
         if (_changeDetector == null || _eventBus == null) return;
 
+        // Phase change detection via local tracking (more reliable than ChangeDetector for host)
+        if (_phase != _lastKnownPhase)
+        {
+            _lastKnownPhase = _phase;
+            OnPhaseChanged();
+        }
+
         foreach (var change in _changeDetector.DetectChanges(this))
         {
             switch (change)
@@ -340,7 +348,7 @@ public class NetworkTurnSystem : NetworkBehaviour, ITurnSystem
                     _eventBus.Raise(new TurnTimerUpdated { RemainingTime = _turnTimer });
                     break;
                 case nameof(_phase):
-                    OnPhaseChanged();
+                    // Handled above via _lastKnownPhase
                     break;
                 case nameof(_player1CardId):
                 case nameof(_player2CardId):

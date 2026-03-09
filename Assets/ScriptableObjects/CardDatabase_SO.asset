@@ -60,6 +60,6 @@ MonoBehaviour:
     _cardSprite: {fileID: 0}
   - _cardId: 9
     _cardName: CardName
-    _attack: 19
+    _attack: 1000
     _defense: 19
     _cardSprite: {fileID: 0}
