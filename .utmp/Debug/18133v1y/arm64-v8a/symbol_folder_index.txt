@@ -1,0 +1,1 @@
+C:\Users\Bedirhan\Documents\GitHub\MultiplayerCardGame\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\build\intermediates\cxx\Debug\18133v1y\obj\arm64-v8a
