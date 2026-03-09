@@ -98,7 +98,6 @@ public class UIManager : MonoBehaviour
     private void OnQuickMatchClicked()
     {
         _networkManager.StartQuickMatch();
-        ShowGameplayPanel();
     }
 
     private void OnPlayerVsBotClicked()
@@ -220,6 +219,7 @@ public class UIManager : MonoBehaviour
     private void OnMatchFound(ref MatchFound _)
     {
         _waitingForOpponentPanel.SetActive(false);
+        ShowGameplayPanel();
         _eventBus.Raise(new GameStateChanged { State = GameState.Gameplay });
     }
 
