@@ -20,6 +20,7 @@ public class LocalTurnSystem : ITurnSystem, IStartable
     private int _playerNextTurnAtkBoost;
     private int _opponentNextTurnAtkBoost;
 
+    private int _lastDisplayedSecond;
     private bool _waitingForResolve;
     private float _resolveTimer;
 
@@ -73,6 +74,7 @@ public class LocalTurnSystem : ITurnSystem, IStartable
         _isSkillUsed = false;
         _assignedSkill = (SkillType)Random.Range(0, 6);
         _turnTimer = _config.TurnDuration;
+        _lastDisplayedSecond = Mathf.CeilToInt(_turnTimer);
         _timerRunning = true;
 
         _eventBus.Raise(new TurnStarted { TurnNumber = CurrentTurn });
@@ -130,7 +132,12 @@ public class LocalTurnSystem : ITurnSystem, IStartable
         if (!_timerRunning) return;
 
         _turnTimer -= deltaTime;
-        _eventBus.Raise(new TurnTimerUpdated { RemainingTime = _turnTimer });
+        int displayedSecond = Mathf.CeilToInt(_turnTimer);
+        if (displayedSecond != _lastDisplayedSecond)
+        {
+            _lastDisplayedSecond = displayedSecond;
+            _eventBus.Raise(new TurnTimerUpdated { RemainingTime = _turnTimer });
+        }
 
         if (_turnTimer <= 0f)
         {
